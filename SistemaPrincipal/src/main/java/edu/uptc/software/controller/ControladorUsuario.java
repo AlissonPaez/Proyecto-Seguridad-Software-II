@@ -1,5 +1,7 @@
 package edu.uptc.software.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import edu.uptc.software.model.Usuario;
+import edu.uptc.software.servicio.ServicioComunicacion;
 import edu.uptc.software.servicio.ServicioUsuario;
 
 @RestController // la clase es un componente web y las respuestas que se envíen se mandarán al navegador como texto o datos
@@ -17,6 +20,9 @@ public class ControladorUsuario {
 
     @Autowired
     private ServicioUsuario servicio; //se conecta el servicio del usuario para la logica
+
+    @Autowired
+    private ServicioComunicacion servicioComunicacion;
 
     // para crear un nuevo usuario.
     @PostMapping("/registrar")
@@ -33,5 +39,15 @@ public class ControladorUsuario {
         } else {
             return "Error: Usuario o contraseña incorrectos.";
         }
+    }
+
+    @GetMapping("/test-envio")
+    public String testEnvio() {
+    return servicioComunicacion.enviarDatos("Mensaje de prueba desde Sistema Principal");
+}
+
+    @GetMapping("/usuarios")
+    public List<Usuario> listarUsuarios() {
+        return servicio.obtenerTodosLosUsuarios();
     }
 }
