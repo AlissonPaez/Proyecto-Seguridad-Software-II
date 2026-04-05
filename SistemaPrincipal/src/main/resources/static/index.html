@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Proyecto de Seguridad de Software</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="view-login" class="card">
+        <h2>Iniciar Sesión</h2>
+        <input type="text" id="logNombre" placeholder="Usuario">
+        <input type="password" id="logClave" placeholder="Contraseña">
+        <input type="number" id="logCodigo" placeholder="Código Temporal">
+        <button class="btn btn-primary" onclick="login()">Entrar al Sistema</button>
+        <div id="resLogin" class="res hidden"></div>
+        <span class="link-btn" onclick="showView('view-register')">¿No tienes cuenta? Regístrate aquí</span>
+    </div>
+
+    <div id="view-register" class="card hidden">
+        <h2>Crear Cuenta</h2>
+        <input type="text" id="regNombre" placeholder="Usuario">
+        <input type="password" id="regClave" placeholder="Contraseña">
+        <button class="btn btn-primary" onclick="registrar()">Registrarme</button>
+        <div id="resRegistro" class="res hidden"></div>
+        <button class="btn btn-secondary" onclick="showView('view-mfa')">Configurar código secreto</button>
+        <span class="link-btn" onclick="showView('view-login')">Iniciar Sesión</span>
+    </div>
+
+    <div id="view-mfa" class="card hidden">
+        <h2>Código Secreto</h2>
+        <input type="text" id="mfaNombre" placeholder="Tu usuario">
+        <button class="btn btn-primary" onclick="activarMFA()">Generar Código</button>
+        <div id="resMFA" class="res hidden"></div>
+        <button class="btn btn-secondary" onclick="showView('view-login')" style="background: #27ae60; color: white;">Ir al Inicio de Sesión</button>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

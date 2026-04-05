@@ -22,9 +22,9 @@ public class Usuario {
     @Column(nullable = false)
     private String contraseña;
 
-    private String secreto2fa;  //para el secreto que se va a generar para el 2FA
+    private String secreto2fa;  // es el secreto que se le dará al usuario para que genere el 2FA con google authenticator.
 
-    private boolean mfaHabilitado = false; // para saber si el usuario activi el 2FA o si solo debe entrar con contraseña
+    private boolean mfaHabilitado = false; // sirve para pedir o no el codigo temporal, si está en true tiene que si o si poner el codigo de los 6 digitos
 
     
     public Long getId() {

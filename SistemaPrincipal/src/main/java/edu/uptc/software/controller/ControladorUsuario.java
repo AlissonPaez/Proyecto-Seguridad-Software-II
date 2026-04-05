@@ -37,14 +37,14 @@ public class ControladorUsuario {
                     @RequestParam String clave, 
                     @RequestParam int codigo) {
     
-    if (servicio.validarCredenciales(nombre, clave)) {
+    if (servicio.validarCredenciales(nombre, clave)) { //Busca en la base de datos si el usuario existe. 1FA
         
-        if (servicio.verificarCodigo2FA(nombre, codigo)) {
+        if (servicio.verificarCodigo2FA(nombre, codigo)) { // Busca el código temporal para ese usuario que de debió generar con google authenticator y mira si es el mismo que se envió.
             
-            return servicioComunicacion.enviarDatos("Acceso 2FA concedido a: " + nombre);
+            return servicioComunicacion.enviarDatos("Acceso al segundo nivel para: " + nombre); // Si todo está bien le envía el mensaje al sistema secundario.
             
         } else {
-            return "Error: Código de segundo factor (2FA) incorrecto.";
+            return "Error: Código temporal del segundo factor incorrecto.";
         }
     }
     return "Error: Usuario o contraseña incorrectos.";
@@ -62,10 +62,10 @@ public class ControladorUsuario {
 
     @GetMapping("/activar-mfa")
     public ResponseEntity<RespuestaSecreto> activar(@RequestParam String nombre) {
-    String secreto = servicio.habilitar2FA(nombre);
+    String secreto = servicio.habilitar2FA(nombre); // genera la cadena del código secreto y la guarda en la base de datos para ese usuario.
     
-    RespuestaSecreto respuesta = new RespuestaSecreto(nombre, secreto);
+    RespuestaSecreto respuesta = new RespuestaSecreto(nombre, secreto); // aquí solo mostramos el nombre y el código secreto.
     
-    return ResponseEntity.ok(respuesta);
+    return ResponseEntity.ok(respuesta); // si todo sale bien se pasa esa respuesta que es la que se muestra en el index
     }
 }

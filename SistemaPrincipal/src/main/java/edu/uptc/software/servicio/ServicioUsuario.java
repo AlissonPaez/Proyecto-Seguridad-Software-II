@@ -44,28 +44,29 @@ public class ServicioUsuario {
 
     // Método para generar el secreto con google authenticator
     public String habilitar2FA(String nombre) {
-    Optional<Usuario> usuarioOpt = repositorio.findByNombreUsuario(nombre);
+    Optional<Usuario> usuarioOpt = repositorio.findByNombreUsuario(nombre); //Busca en el repositorio o bd el usuario.
     if (usuarioOpt.isPresent()) {
-        GoogleAuthenticatorKey credentials = gAuth.createCredentials();
+        GoogleAuthenticatorKey credentials = gAuth.createCredentials(); // la librería de google genera el código secreto para el usuario en ga.
         String secreto = credentials.getKey();
         
         Usuario u = usuarioOpt.get();
-        u.setSecreto2fa(secreto);
-        u.setMfaHabilitado(true);
+        u.setSecreto2fa(secreto); // guarda esa llave en la base de datos para ese usuario.
+        u.setMfaHabilitado(true); // y obliga a que tenga que ponerse el codigo temporal.
         repositorio.save(u);
-        return secreto; // Este código es el que se mete en el celular
+        return secreto; // Este código secreto es el que se mete en el celular para sacar el otro.
     }
     return "Usuario no encontrado";
 }
 
-// Método para validar el código que el usuario escribe en el login
+// Método para validar el código temporal del login
     public boolean verificarCodigo2FA(String nombre, int codigo) {
-    Optional<Usuario> usuarioOpt = repositorio.findByNombreUsuario(nombre);
+    Optional<Usuario> usuarioOpt = repositorio.findByNombreUsuario(nombre); //Busca el nombre en la base de datos para ver el secreto y comparar.
     if (usuarioOpt.isPresent()) {
         Usuario u = usuarioOpt.get();
-        if (!u.isMfaHabilitado() || u.getSecreto2fa() == null) return false;
+        if (!u.isMfaHabilitado() || u.getSecreto2fa() == null)  // Ve si el usuario tiene que de verdad ingresar ese codigo temporal y si tiene el codigo secreto.
+            return false;
         
-        // Compara el código del celular con el secreto guardado
+        // se trae el codigo secreto de la bd, y con la librería de google se hace el calculo y se compara que si sean los 6 digitos que el usuario ingreso.
         return gAuth.authorize(u.getSecreto2fa(), codigo);
     }
     return false;
