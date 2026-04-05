@@ -1,4 +1,4 @@
-package edu.uptc.co.software.model;
+package edu.uptc.software.model;
 
 public class MensajeSeguro {
     private String contenido;

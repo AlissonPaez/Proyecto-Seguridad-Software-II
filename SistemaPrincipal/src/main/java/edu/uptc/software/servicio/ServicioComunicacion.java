@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import edu.uptc.co.software.model.MensajeSeguro;
+import edu.uptc.software.model.MensajeSeguro;
 
 @Service
 public class ServicioComunicacion {
