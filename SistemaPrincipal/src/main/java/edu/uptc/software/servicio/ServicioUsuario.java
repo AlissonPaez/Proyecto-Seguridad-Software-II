@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 
 import edu.uptc.software.model.Usuario;
@@ -15,11 +16,19 @@ import edu.uptc.software.repositorio.RepositorioUsuario;
 @Service // para que spring boot sepa que esta clase tiene la logica de la autenticacion
 public class ServicioUsuario {
 
-    private final GoogleAuthenticator gAuth = new GoogleAuthenticator();
+    private final GoogleAuthenticator gAuth;
 
     @Autowired // para conectar con el repositorio de la bd y hacer operaciones
     private RepositorioUsuario repositorio;
 
+    public ServicioUsuario() {
+        GoogleAuthenticatorConfig config = new GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder()
+            .setTimeStepSizeInMillis(30000) // 30 segundos estándar
+            .setWindowSize(3) 
+            .build();
+        this.gAuth = new GoogleAuthenticator(config);
+    }   
+    
 
     public String registrarUsuario(Usuario usuario) { // se busca el usuario en el repositorio y si ya esta da error
         if (repositorio.findByNombreUsuario(usuario.getNombreUsuario()).isPresent()) {
