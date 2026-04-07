@@ -2,14 +2,14 @@
 
 Proyecto integrado que demuestra arquitectura de microservicios con autenticación segura y comunicación entre sistemas.
 
-## 📋 Descripción General
+## Descripción General
 
-Este proyecto contiene **dos sistemas independientes** que se comunican entre sí:
+Este proyecto contiene dos sistemas independientes que se comunican entre sí:
 
 1. **Sistema Principal** - Gestión de usuarios, autenticación y orquestación
 2. **Sistema Secundario** - Receptor de mensajes y procesamiento
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -31,7 +31,7 @@ Este proyecto contiene **dos sistemas independientes** que se comunican entre s�
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 Proyecto-Seguridad-Software-II/
@@ -68,12 +68,12 @@ Proyecto-Seguridad-Software-II/
 └── README.md                   # Este archivo
 ```
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Requisitos
-- **Java 21** o superior
-- **Maven 3.6+**
-- **Git**
+- Java 21 o superior
+- Maven 3.6+
+- Git
 
 ### Paso 1: Clonar/Descargar el Proyecto
 
@@ -90,7 +90,7 @@ cd SistemaPrincipal
 ./mvnw spring-boot:run
 ```
 
-Disponible en: **http://localhost:8080**
+Disponible en: http://localhost:8080
 
 ### Paso 3: Ejecutar Sistema Secundario (en otra terminal)
 
@@ -99,31 +99,31 @@ cd SoftwareSecundario
 ./mvnw spring-boot:run
 ```
 
-Disponible en: **http://localhost:8081**
+Disponible en: http://localhost:8081
 
-## 🔌 Endpoints Clave
+## Endpoints Clave
 
 ### Sistema Principal
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | POST | `/auth/registrar` | Registrar nuevo usuario |
-| GET | `/auth/login` | Validar credenciales |
-| GET | `/auth/usuarios` | Listar todos los usuarios |
+| POST | `/auth/login` | Validar credenciales con 2FA |
+| GET | `/auth/activar-mfa` | Generar secreto para 2FA |
 | GET | `/auth/test-envio` | Enviar mensaje al Sistema Secundario |
 
 ### Sistema Secundario
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/receptos/recibir` | Recibir datos del Sistema Principal |
+| POST | `/receptor/recibir` | Recibir datos del Sistema Principal |
 
-## 📚 Documentación Detallada
+## Documentación Detallada
 
-- **[Sistema Principal](SistemaPrincipal/README.md)** - Endpoints, guía de uso y características
-- **[Sistema Secundario](SoftwareSecundario/README.md)** - Endpoints, guía de uso y características
+- [Sistema Principal](SistemaPrincipal/README.md) - Endpoints, guía de uso y características
+- [Sistema Secundario](SoftwareSecundario/README.md) - Endpoints, guía de uso y características
 
-## 💾 Acceso a Bases de Datos
+## Acceso a Bases de Datos
 
 ### Consola H2 - Sistema Principal
 
@@ -134,22 +134,30 @@ Usuario: sa
 Contraseña: (vacío)
 ```
 
-**Query para ver usuarios:**
+Query para ver usuarios:
 ```sql
 SELECT * FROM USUARIOS;
 ```
 
-## 🔒 Características de Seguridad (En Desarrollo)
+## Características de Seguridad
 
-- ✅ Autenticación de usuario/contraseña
-- 🔄 Autenticación de dos factores (2FA) - En desarrollo
-- ✅ Validación de credenciales
-- 🔄 Encriptación de contraseñas (Pendiente)
-- 🔄 HTTPS/SSL (Pendiente)
-- 🔄 Rate limiting (Pendiente)
-- ✅ Modelo seguro para comunicación entre sistemas
+- Autenticación de usuario/contraseña
+- Autenticación de dos factores (2FA) con TOTP
+- Validación de credenciales
+- Modelo seguro para comunicación entre sistemas con integridad de datos
 
-## 🛠️ Stack Tecnológico
+## Flujo de Seguridad
+
+1. Usuario registra cuenta en Sistema Principal
+2. Usuario activa 2FA y obtiene secreto para Google Authenticator
+3. Usuario intenta login con POST /auth/login enviando JSON con nombre, clave y código TOTP
+4. Sistema Principal valida credenciales y 2FA
+5. Si válido, genera hash SHA-256 del mensaje de acceso
+6. Envía mensaje seguro (contenido + hash) al Sistema Secundario
+7. Sistema Secundario recalcula hash y verifica integridad
+8. Responde confirmación o alerta de alteración
+
+## Stack Tecnológico
 
 | Tecnología | Versión | Propósito |
 |-----------|---------|----------|
@@ -161,17 +169,18 @@ SELECT * FROM USUARIOS;
 | Maven | 3.6+ | Gestor de dependencias |
 | JUnit | - | Testing |
 
-## 📋 Dependencias Principales
+## Dependencias Principales
 
 ```xml
 - spring-boot-starter-web
 - spring-boot-starter-data-jpa
 - spring-boot-starter-security
-- h2 (database)
+- h2
 - spring-boot-h2console
+- google-authenticator
 ```
 
-## 🧪 Pruebas
+## Pruebas
 
 ### Sistema Principal
 
@@ -187,29 +196,7 @@ cd SoftwareSecundario
 ./mvnw test
 ```
 
-## 📊 Diagrama de Flujo de Autenticación
-
-```
-1. Usuario → POST /auth/registrar
-             ↓
-2. Sistema Principal: Valida usuario único
-             ↓
-3. Registra en BD
-             ↓
-4. Responde: "Usuario registrado exitosamente"
-
----
-
-1. Usuario → GET /auth/login?nombre=x&clave=y
-             ↓
-2. Sistema Principal: Busca usuario en BD
-             ↓
-3. Valida contraseña
-             ↓
-4. Retorna mensaje de bienvenida o error
-```
-
-## 🔧 Configuración Personalizada
+## Configuración Personalizada
 
 ### Cambiar Puerto del Sistema Principal
 
@@ -233,7 +220,7 @@ logging.level.root=INFO
 logging.level.edu.uptc.software=DEBUG
 ```
 
-## 🚨 Resolución de Problemas
+## Resolución de Problemas
 
 ### Los proyectos no se compilan
 ```bash
@@ -259,20 +246,20 @@ Asegúrate que en `application.properties` esté:
 spring.h2.console.enabled=true
 ```
 
-## 📝 Notas de Seguridad ⚠️
+## Notas de Seguridad
 
-Este es un **proyecto educativo**. Para producción:
+Este es un proyecto educativo. Para producción:
 
-- ❌ NO guardes contraseñas en texto plano - Usa BCrypt
-- ❌ NO expongas endpoints sin autenticación
-- ❌ NO uses HTTP - Implementa HTTPS/SSL
-- ❌ NO publiques secretos en Git - Usa variables de entorno
-- ✅ Valida TODAS las entradas del usuario
-- ✅ Implementa logging y monitoreo
-- ✅ Usa CORS apropiadamente
-- ✅ Implementa rate limiting
+- NO guardes contraseñas en texto plano - Usa BCrypt
+- NO expongas endpoints sin autenticación
+- NO uses HTTP - Implementa HTTPS/SSL
+- NO publiques secretos en Git - Usa variables de entorno
+- Valida TODAS las entradas del usuario
+- Implementa logging y monitoreo
+- Usa CORS apropiadamente
+- Implementa rate limiting
 
-## 📚 Recursos Adicionales
+## Recursos Adicionales
 
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
 - [Spring Security](https://spring.io/projects/spring-security)
@@ -280,21 +267,13 @@ Este es un **proyecto educativo**. Para producción:
 - [H2 Database](https://www.h2database.com/)
 - [Apache Maven](https://maven.apache.org/)
 
-## 👨‍💼 Información del Proyecto
+## Información del Proyecto
 
-- **Asignatura:** Ingeniería de Software II
-- **Semestre:** 9
-- **Tema:** Seguridad en Software
-- **Institución:** UPTC
+- Asignatura: Ingeniería de Software II
+- Semestre: 9
+- Tema: Seguridad en Software
+- Institución: UPTC
 
-## 📞 Contacto y Soporte
 
-Para preguntas o problemas, consulta:
-1. La documentación en los README específicos de cada sistema
-2. Los comentarios en el código fuente
-3. Tu profesor o asistente del curso
-
----
-
-**Última actualización:** Abril 2026
-**Estado:** En desarrollo 🚧
+Última actualización: Abril 2026
+Estado: En desarrollo

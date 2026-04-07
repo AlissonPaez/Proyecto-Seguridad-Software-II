@@ -1,103 +1,299 @@
-# Proyecto-Seguridad-Software-II - Sistema Principal
+# Sistema Principal - Gestión de Autenticación e Integridad
 
-Sistema de gestión de usuarios con autenticación y comunicación segura entre aplicaciones.
+Sistema de gestión de usuarios con autenticación de dos factores (2FA) y comunicación segura entre aplicaciones.
 
-## 📋 Requisitos Previos
+## Descripción
 
+El Sistema Principal actúa como emisor de datos críticos. Gestiona la autenticación de usuarios, genera códigos TOTP para 2FA y envía mensajes con integridad garantizada al Sistema Secundario.
+
+## Arquitectura
+
+```
+Sistema Principal (Puerto 8080)
+├── ControladorUsuario (@RestController)
+├── ServicioUsuario (@Service)
+├── ServicioIntegridad (@Service)
+├── ServicioComunicacion (@Service)
+├── RepositorioUsuario (JPA)
+└── Base de Datos H2 (En memoria)
+```
+
+## Características Principales
+
+- Gestión completa de usuarios con persistencia en H2
+- Autenticación de dos factores con Google Authenticator
+- Generación de hashes SHA-256 para integridad de mensajes
+- Comunicación segura con Sistema Secundario vía RestTemplate
+- Protección de datos sensibles en respuestas JSON
+
+## Inicio Rápido
+
+### Requisitos
 - Java 21 o superior
 - Maven 3.6+
-- Git
 
-## 🚀 Pasos para Ejecutar el Proyecto
-
-### Opción 1: Usar Maven Wrapper (Recomendado)
+### Ejecutar
 
 ```bash
-# Navegar al directorio del proyecto
 cd SistemaPrincipal
-
-# Ejecutar la aplicación
 ./mvnw spring-boot:run
 ```
 
-### Opción 2: Usar Maven Instalado
+Disponible en: http://localhost:8080
 
-```bash
-cd SistemaPrincipal
-mvn spring-boot:run
+## Endpoints
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/auth/registrar` | Registrar nuevo usuario |
+| POST | `/auth/login` | Validar credenciales con 2FA |
+| GET | `/auth/activar-mfa` | Generar secreto para 2FA |
+| GET | `/auth/test-envio` | Enviar mensaje de prueba al Sistema Secundario |
+
+## Detalles Técnicos
+
+### Gestión de Autenticación
+
+#### Registro de Usuario
+```java
+@PostMapping("/auth/registrar")
+public String registrar(@RequestBody Usuario usuario)
 ```
 
-### Opción 3: Compilar y ejecutar el JAR
+- Valida unicidad del nombre de usuario
+- Persiste en base de datos H2 usando JPA
+- Retorna mensaje de confirmación
 
-```bash
-cd SistemaPrincipal
-
-# Compilar el proyecto
-./mvnw clean package
-
-# Ejecutar el JAR
-java -jar target/Proyecto-Seguridad-Software-II-0.0.1-SNAPSHOT.jar
+#### Login con 2FA
+```java
+@PostMapping("/auth/login")
+public String login(@RequestBody LoginRequest request)
 ```
 
-La aplicación estará disponible en: **http://localhost:8080**
+Flujo de autenticación:
+1. Valida credenciales (usuario/contraseña)
+2. Verifica código TOTP de 6 dígitos
+3. Si válido, envía mensaje seguro al Sistema Secundario
 
-## 🔌 Endpoints Disponibles
-
-### 1. Registrar Usuario
-**POST** `/auth/registrar`
-
-Crea un nuevo usuario en el sistema.
-
-**Request Body (JSON):**
+Request Body:
 ```json
 {
-  "nombreUsuario": "juan123",
-  "contraseña": "miContraseña123",
-  "mfaHabilitado": false
+  "nombre": "juan123",
+  "clave": "miContraseña123",
+  "codigo": 123456
 }
 ```
 
-**Respuestas:**
-- `200 OK`: "Usuario registrado exitosamente."
-- `400 Bad Request`: "Error: El nombre de usuario ya existe."
+### Autenticación de Dos Factores (2FA)
 
-**Ejemplo con cURL:**
-```bash
-curl -X POST http://localhost:8080/auth/registrar \
-  -H "Content-Type: application/json" \
-  -d '{"nombreUsuario":"juan123","contraseña":"miContraseña123","mfaHabilitado":false}'
+#### Generación de Secreto
+```java
+public String habilitar2FA(String nombre)
 ```
 
----
+- Usa librería `google-authenticator` para generar secreto
+- Persiste secreto en campo `secreto2fa` de la entidad Usuario
+- Establece `mfaHabilitado = true`
 
-### 2. Iniciar Sesión (Login)
-**GET** `/auth/login`
-
-Valida las credenciales del usuario.
-
-**Parámetros de Query:**
-- `nombre` (string): Nombre de usuario
-- `clave` (string): Contraseña
-
-**Respuestas:**
-- `200 OK`: "¡Bienvenido, [nombre]! Ha ingresado al sistema."
-- `401 Unauthorized`: "Error: Usuario o contraseña incorrectos."
-
-**Ejemplo con cURL:**
-```bash
-curl "http://localhost:8080/auth/login?nombre=juan123&clave=miContraseña123"
+#### Verificación de Código TOTP
+```java
+public boolean verificarCodigo2FA(String nombre, int codigo)
 ```
 
----
+- Recupera secreto de base de datos
+- Valida código usando `GoogleAuthenticator.authorize()`
+- Soporta ventana de tiempo de 30 segundos
 
-### 3. Listar Todos los Usuarios
-**GET** `/auth/usuarios`
+### Integridad de Datos
 
-Obtiene la lista completa de usuarios registrados en el sistema.
+#### Servicio de Integridad
+```java
+@Service
+public class ServicioIntegridad {
+    public String generarHash(String mensaje) {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hashBytes = digest.digest(mensaje.getBytes(StandardCharsets.UTF_8));
+        return Base64.getEncoder().encodeToString(hashBytes);
+    }
+}
+```
 
-**Respuesta (JSON):**
-```json
-[
+- Genera hash SHA-256 del contenido del mensaje
+- Codifica en Base64 para transmisión segura
+- Usado antes de enviar datos al Sistema Secundario
+
+#### Comunicación Segura
+```java
+@Service
+public class ServicioComunicacion {
+    public String enviarDatos(String texto) {
+        MensajeSeguro mensajeSeguro = new MensajeSeguro();
+        mensajeSeguro.setContenido(texto);
+        String hash = servicioIntegridad.generarHash(texto);
+        mensajeSeguro.setHash(hash);
+        return restTemplate.postForObject(url, mensajeSeguro, String.class);
+    }
+}
+```
+
+- Crea objeto `MensajeSeguro` con contenido y hash
+- Envía POST a `http://localhost:8081/receptor/recibir`
+- Usa `RestTemplate` inyectado desde `DemoApplication`
+
+### Modelo de Datos
+
+#### Usuario
+```java
+@Entity
+@Table(name = "usuarios")
+public class Usuario {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String nombreUsuario;
+
+    @Column(nullable = false)
+    private String contraseña;
+
+    private String secreto2fa;
+    private boolean mfaHabilitado = false;
+}
+```
+
+- Persistencia con JPA/Hibernate
+- Campo `secreto2fa` para almacenar secreto de Google Authenticator
+- Campo `mfaHabilitado` para controlar requerimiento de 2FA
+
+#### MensajeSeguro
+```java
+public class MensajeSeguro {
+    private String contenido;
+    private String hash;
+    // getters y setters
+}
+```
+
+- Contenedor para mensaje y su hash de integridad
+- Transmitido como JSON en comunicación inter-sistemas
+
+### Protección de Datos Sensibles
+
+Los campos sensibles están protegidos en respuestas JSON:
+
+```java
+public class Usuario {
+    // ...
+
+    @JsonIgnore
+    private String contraseña;
+
+    @JsonIgnore
+    private String secreto2fa;
+}
+```
+
+Esto previene la exposición accidental de contraseñas y secretos 2FA.
+
+## Base de Datos H2
+
+### Configuración
+```properties
+# application.properties
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.h2.console.enabled=true
+```
+
+### Acceso a Consola
+- URL: http://localhost:8080/h2-console
+- JDBC URL: jdbc:h2:mem:testdb
+- Usuario: sa
+- Contraseña: (vacío)
+
+### Queries Útiles
+```sql
+-- Ver todos los usuarios
+SELECT * FROM usuarios;
+
+-- Ver estructura de tabla
+DESCRIBE usuarios;
+```
+
+## Dependencias
+
+```xml
+<!-- pom.xml -->
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>com.warrenstrange</groupId>
+        <artifactId>google-authenticator</artifactId>
+        <version>1.05</version>
+    </dependency>
+</dependencies>
+```
+
+## Flujo de Uso
+
+1. **Registro**: Usuario se registra con nombre y contraseña
+2. **Activación 2FA**: Usuario solicita activación de MFA y recibe secreto
+3. **Configuración App**: Usuario configura Google Authenticator con el secreto
+4. **Login**: Usuario envía POST con nombre, contraseña y código TOTP
+5. **Validación**: Sistema valida credenciales y 2FA
+6. **Envío Seguro**: Si válido, genera hash y envía mensaje al Sistema Secundario
+7. **Confirmación**: Recibe respuesta de integridad verificada
+
+## Configuración Personalizada
+
+### Cambiar Puerto
+```properties
+server.port=9090
+```
+
+### Configuración 2FA
+```java
+// En ServicioUsuario constructor
+GoogleAuthenticatorConfig config = new GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder()
+    .setTimeStepSizeInMillis(30000) // 30 segundos
+    .setWindowSize(3) // Tolerancia de 3 periodos
+    .build();
+```
+
+## Pruebas
+
+```bash
+cd SistemaPrincipal
+./mvnw test
+```
+
+## Notas de Seguridad
+
+- Contraseñas almacenadas en texto plano (para fines educativos)
+- Comunicación HTTP sin encriptación (para fines educativos)
+- Para producción: implementar BCrypt para contraseñas y HTTPS
+
+## Información del Proyecto
+
+- Parte de: Proyecto de Seguridad en Software II
+- Rol: Emisor de datos con autenticación
+- Puerto: 8080
+- Framework: Spring Boot 4.0.5
   {
     "id": 1,
     "nombreUsuario": "juan123",
@@ -227,7 +423,3 @@ Asegúrate de que `spring.h2.console.enabled=true` esté en `application.propert
 ```
 
 ---
-
-## 📧 Soporte
-
-Para preguntas o problemas, consulta con tu profesor o revisa la documentación oficial de Spring Boot.

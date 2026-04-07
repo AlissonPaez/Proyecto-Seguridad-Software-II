@@ -1,103 +1,210 @@
-# Sistema Secundario - Proyecto Seguridad Software II
+# Sistema Secundario - Verificación de Integridad
 
-Sistema receptor de mensajes que se comunica con el Sistema Principal para recibir datos de forma segura.
+Sistema receptor de mensajes que valida la integridad de los datos recibidos del Sistema Principal.
 
-## 📋 Requisitos Previos
+## Descripción
 
+El Sistema Secundario actúa como receptor de datos críticos. No confía ciegamente en la información que recibe; en su lugar, verifica activamente la integridad de cada mensaje mediante el recálculo de hashes SHA-256.
+
+## Arquitectura
+
+```
+Sistema Secundario (Puerto 8081)
+├── ControladorReceptor (@RestController)
+├── ServicioIntegridad (@Service)
+├── Modelo MensajeSeguro
+└── Logs de verificación de integridad
+```
+
+## Características Principales
+
+- Recepción de mensajes con verificación de integridad
+- Recálculo independiente de hashes SHA-256
+- Detección de alteraciones en mensajes transmitidos
+- Logging detallado de verificaciones de integridad
+- Respuestas claras sobre el estado de los mensajes
+
+## Inicio Rápido
+
+### Requisitos
 - Java 21 o superior
 - Maven 3.6+
 - Sistema Principal ejecutándose en http://localhost:8080
 
-## 🚀 Pasos para Ejecutar el Proyecto
-
-### Opción 1: Usar Maven Wrapper (Recomendado)
+### Ejecutar
 
 ```bash
-# Navegar al directorio del proyecto
 cd SoftwareSecundario
-
-# Ejecutar la aplicación
 ./mvnw spring-boot:run
 ```
 
-### Opción 2: Usar Maven Instalado
+Disponible en: http://localhost:8081
 
-```bash
-cd SoftwareSecundario
-mvn spring-boot:run
-```
+## Endpoints
 
-### Opción 3: Compilar y ejecutar el JAR
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/receptor/recibir` | Recibir y verificar mensaje del Sistema Principal |
 
-```bash
-cd SoftwareSecundario
+## Verificación de Integridad
 
-# Compilar el proyecto
-./mvnw clean package
+### Lógica de Recepción
 
-# Ejecutar el JAR
-java -jar target/SoftwareSecundario-0.0.1-SNAPSHOT.jar
-```
+```java
+@PostMapping("/recibir")
+public String recibirMensaje(@RequestBody MensajeSeguro mensaje) {
+    // Recalculamos el hash del contenido recibido
+    String hashCalculado = servicioIntegridad.generarHash(mensaje.getContenido());
 
-La aplicación estará disponible en: **http://localhost:8081**
-
-## 🔌 Endpoints Disponibles
-
-### 1. Recibir Datos
-**POST** `/receptos/recibir`
-
-Recibe datos enviados desde el Sistema Principal.
-
-**Request Body (JSON):**
-```json
-{
-  "contenido": "Mensaje de prueba desde Sistema Principal"
+    // Comparamos el hash que llegó con el que acabamos de calcular
+    if (hashCalculado.equals(mensaje.getHash())) {
+        System.out.println("INTEGRIDAD OK: El mensaje no ha sido alterado");
+        return "Mensaje verificado";
+    } else {
+        System.out.println("ALERTA: Mensaje alterado detectado");
+        return "ERROR: Integridad comprometida";
+    }
 }
 ```
 
-**Respuestas:**
-- `200 OK`: "Datos recibidos correctamente: [contenido]"
-- `400 Bad Request`: Error si falta el contenido
+### Servicio de Integridad
 
-**Ejemplo con cURL:**
-```bash
-curl -X POST http://localhost:8081/receptos/recibir \
-  -H "Content-Type: application/json" \
-  -d '{"contenido":"Mensaje de prueba"}'
+```java
+@Service
+public class ServicioIntegridad {
+    public String generarHash(String mensaje) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(mensaje.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hashBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error al calcular SHA-256: " + e.getMessage());
+        }
+    }
+}
 ```
 
----
+- Utiliza el mismo algoritmo SHA-256 que el Sistema Principal
+- Codificación Base64 consistente
+- Manejo de excepciones para algoritmos no disponibles
 
-## 🔐 Características
+### Modelo de Datos
 
-- ✅ Recepción de mensajes desde Sistema Principal
-- ✅ Modelo seguro para comunicación (MensajeSeguro)
-- ✅ API REST para recibir datos
-- ✅ Pruebas unitarias incluidas
-
-## 📊 Modelo de Datos
-
-### MensajeSeguro
-
-Estructura de datos para la comunicación segura entre sistemas:
+#### MensajeSeguro
 
 ```java
 public class MensajeSeguro {
-    private String contenido;      // Contenido del mensaje
-    private LocalDateTime timestamp; // Marca de tiempo
-    private String procedencia;     // Sistema que envía el mensaje
-    // ... getters y setters
+    private String contenido;
+    private String hash;
+
+    // Getters y setters
+    public String getContenido() { return contenido; }
+    public void setContenido(String contenido) { this.contenido = contenido; }
+    public String getHash() { return hash; }
+    public void setHash(String hash) { this.hash = hash; }
 }
 ```
 
----
+- `contenido`: El mensaje transmitido
+- `hash`: Firma digital SHA-256 en Base64 del contenido
 
-## 📁 Estructura del Proyecto
+### Proceso de Verificación
 
+1. **Recepción**: Recibe POST con objeto `MensajeSeguro`
+2. **Recálculo**: Genera hash SHA-256 del campo `contenido`
+3. **Comparación**: Compara hash calculado con `mensaje.getHash()`
+4. **Respuesta**: Retorna resultado de verificación
+5. **Logging**: Imprime mensaje en consola según resultado
+
+### Ejemplos de Comunicación
+
+#### Mensaje Válido
+Request:
+```json
+{
+  "contenido": "Acceso exitoso para: juan123",
+  "hash": "aGVsbG93b3JsZA=="
+}
 ```
-SoftwareSecundario/
-├── src/
-│   ├── main/
+
+Response: `"Mensaje verificado"`
+
+Console: `INTEGRIDAD OK: El mensaje no ha sido alterado`
+
+#### Mensaje Alterado
+Request:
+```json
+{
+  "contenido": "Acceso exitoso para: juan123",
+  "hash": "aGVsbG93b3JsZA=="
+}
+```
+
+Si el contenido fue alterado durante transmisión, Response: `"ERROR: Integridad comprometida"`
+
+Console: `ALERTA: Mensaje alterado detectado`
+
+## Configuración
+
+### Puerto
+```properties
+# application.properties
+server.port=8081
+spring.application.name=SoftwareSecundario
+```
+
+### Dependencias
+
+```xml
+<!-- pom.xml -->
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+</dependencies>
+```
+
+## Pruebas
+
+```bash
+cd SoftwareSecundario
+./mvnw test
+```
+
+## Logs de Verificación
+
+El sistema imprime mensajes detallados en la consola:
+
+- **Verificación exitosa**: `INTEGRIDAD OK: El mensaje no ha sido alterado`
+- **Verificación fallida**: `ALERTA: Mensaje alterado detectado`
+
+Estos logs permiten monitorear la integridad de la comunicación en tiempo real.
+
+## Flujo de Comunicación
+
+1. **Sistema Principal** valida credenciales y 2FA
+2. **Sistema Principal** genera hash SHA-256 del mensaje de éxito
+3. **Sistema Principal** envía POST con `MensajeSeguro` a `/receptor/recibir`
+4. **Sistema Secundario** recibe el mensaje
+5. **Sistema Secundario** recalcula hash del contenido
+6. **Sistema Secundario** compara hashes
+7. **Sistema Secundario** responde con resultado de verificación
+8. **Sistema Secundario** registra resultado en logs
+
+## Seguridad
+
+- Verificación independiente de integridad
+- No confía en el emisor; valida cada mensaje
+- Detección de manipulaciones durante transmisión
+- Logging de todas las verificaciones para auditoría
+
+## Información del Proyecto
+
+- Parte de: Proyecto de Seguridad en Software II
+- Rol: Receptor de datos con verificación de integridad
+- Puerto: 8081
+- Framework: Spring Boot 4.0.5
 │   │   ├── java/
 │   │   │   └── edu/uptc/co/SoftwareSecundario/
 │   │   │       ├── controller/     # Controladores REST
