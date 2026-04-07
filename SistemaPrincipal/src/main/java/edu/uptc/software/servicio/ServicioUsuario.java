@@ -31,6 +31,11 @@ public class ServicioUsuario {
     
 
     public String registrarUsuario(Usuario usuario) { // se busca el usuario en el repositorio y si ya esta da error
+        if (usuario.getNombreUsuario() == null || usuario.getNombreUsuario().isBlank() || 
+        usuario.getContraseña() == null || usuario.getContraseña().isBlank()) {
+        return "Error: Los campos no pueden estar vacíos.";
+    }
+
         if (repositorio.findByNombreUsuario(usuario.getNombreUsuario()).isPresent()) {
             return "Error: El nombre de usuario ya existe.";
         }
@@ -53,6 +58,9 @@ public class ServicioUsuario {
 
     // Método para generar el secreto con google authenticator
     public String habilitar2FA(String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+        return "Error: Debe ingresar un nombre de usuario.";
+    }
     Optional<Usuario> usuarioOpt = repositorio.findByNombreUsuario(nombre); //Busca en el repositorio o bd el usuario.
     if (usuarioOpt.isPresent()) {
         GoogleAuthenticatorKey credentials = gAuth.createCredentials(); // la librería de google genera el código secreto para el usuario en ga.

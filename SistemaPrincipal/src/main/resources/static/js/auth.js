@@ -34,7 +34,13 @@ async function login() {
     const clave = document.getElementById('logClave').value;
     const codigo = document.getElementById('logCodigo').value;
     const res = document.getElementById('resLogin');
-    
+
+    if (!nombre || !clave || !codigo) {
+        res.classList.remove('hidden');
+        res.innerText = "Por favor, llene todos los campos.";
+        return; 
+    }
+
     const response = await fetch(`/auth/login?nombre=${nombre}&clave=${clave}&codigo=${codigo}`);
     const data = await response.text();
     res.classList.remove('hidden');
