@@ -18,16 +18,15 @@ public class ControladorReceptor {
 
     @PostMapping("/recibir")
     public String recibirMensaje(@RequestBody MensajeSeguro mensaje) {
-        // Recalculamos el hash del contenido recibido
+        
         String hashCalculado = servicioIntegridad.generarHash(mensaje.getContenido());
-
-        // Comparamos el hash que llegó con el que acabamos de calcular
+        
         if (hashCalculado.equals(mensaje.getHash())) {
-            System.out.println("✅ INTEGRIDAD VERIFICADA: El mensaje no ha sido alterado");
-            return "Mensaje verificado";
+            System.out.println("INTEGRIDAD OK: El mensaje es auténtico.");
+            return "Mensaje verificado y aceptado por el sistema secundario";
         } else {
-            System.out.println("❌ ALERTA: Error de integridad detectado");
-            return "ERROR: Integridad comprometida";
+            System.out.println("ALERTA: El mensaje fue manipulado en el camino.");
+            return "ERROR: Integridad comprometida. Mensaje rechazado.";
         }
     }
 }

@@ -1,7 +1,5 @@
 package edu.uptc.software.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import edu.uptc.software.model.LoginRequest;
 import edu.uptc.software.model.RespuestaSecreto;
 import edu.uptc.software.model.Usuario;
 import edu.uptc.software.servicio.ServicioComunicacion;
@@ -32,33 +31,32 @@ public class ControladorUsuario {
         return servicio.registrarUsuario(usuario);
     }
 
-    @GetMapping("/login")
-    public String login(@RequestParam String nombre, 
-                    @RequestParam String clave, 
-                    @RequestParam int codigo) {
-    
-    if (servicio.validarCredenciales(nombre, clave)) { //Busca en la base de datos si el usuario existe. 1FA
-        
-        if (servicio.verificarCodigo2FA(nombre, codigo)) { // Busca el código temporal para ese usuario que de debió generar con google authenticator y mira si es el mismo que se envió.
+    @PostMapping("/login")
+    public String login(@RequestBody LoginRequest request) {
+        // 1. Validar Credenciales
+        if (servicio.validarCredenciales(request.getNombre(), request.getClave())) {
             
-            return servicioComunicacion.enviarDatos("Acceso al segundo nivel para: " + nombre); // Si todo está bien le envía el mensaje al sistema secundario.
-            
-        } else {
-            return "Error: Código temporal del segundo factor incorrecto.";
+            // 2. Validar el 2FA
+            if (servicio.verificarCodigo2FA(request.getNombre(), request.getCodigo())) {
+                
+                // 3. Si todo es correcto, enviamos al Sistema Secundario con INTEGRIDAD (Tu parte)
+                return servicioComunicacion.enviarDatos("Acceso exitoso para: " + request.getNombre());
+            } else {
+                return "Error: Código 2FA incorrecto o expirado.";
+            }
         }
+        return "Error: Usuario o contraseña incorrectos.";
     }
-    return "Error: Usuario o contraseña incorrectos.";
-}
 
     @GetMapping("/test-envio")
     public String testEnvio() {
     return servicioComunicacion.enviarDatos("Mensaje de prueba desde Sistema Principal");
 }
 
-    @GetMapping("/usuarios")
-    public List<Usuario> listarUsuarios() {
-        return servicio.obtenerTodosLosUsuarios();
-    }
+    //@GetMapping("/usuarios")
+    //public List<Usuario> listarUsuarios() {
+    //    return servicio.obtenerTodosLosUsuarios();
+    //}
 
     @GetMapping("/activar-mfa")
     public ResponseEntity<RespuestaSecreto> activar(@RequestParam String nombre) {

@@ -1,5 +1,8 @@
 package edu.uptc.software.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -19,9 +22,11 @@ public class Usuario {
     @Column(unique = true, nullable = false)
     private String nombreUsuario; // para que no hayan dos usuarios con el mismo nombre
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String contraseña;
 
+    @JsonIgnore
     private String secreto2fa;  // es el secreto que se le dará al usuario para que genere el 2FA con google authenticator.
 
     private boolean mfaHabilitado = false; // sirve para pedir o no el codigo temporal, si está en true tiene que si o si poner el codigo de los 6 digitos
